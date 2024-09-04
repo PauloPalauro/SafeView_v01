@@ -11,7 +11,7 @@ def ppe_detection():
     cap.set(4, 720)   # Set height
 
     # Load YOLO model
-    model = YOLO("/home/ideal_pad/Documentos/SafeView_v01/YOLO-Weights/ppe.pt")
+    model = YOLO("/home/ideal_pad/Documentos/SafeView_v01/BackEnd/YOLO-Weights/ppe.pt")
 
     # Class names for detection
     classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 
@@ -48,7 +48,7 @@ def ppe_detection():
                 
                 # Set bounding box and text colors
                 if conf > 0.5:
-                    if currentClass in ['SEM-Capacete', 'SEM-Colete', 'SEM-Máscara']:
+                    if currentClass in ['SEM-Capacete', 'SEM-Colete', 'SEM-Mascara']:
                         myColor = (0, 0, 255)  # Red
                     elif currentClass in ['Capacete', 'Colete', 'Máscara']:
                         myColor = (0, 255, 0)  # Green

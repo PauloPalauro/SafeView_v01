@@ -11,14 +11,14 @@ def ppe_detection():
     cap.set(4, 720)   # Set height
 
     # Load YOLO model
-    model = YOLO("/home/ideal_pad/Documentos/SafeView_v01/YOLO-Weights/ppe.pt")
+    model = YOLO("/home/ideal_pad/Documentos/SafeView_v01/BackEnd/YOLO-Weights/ppe.pt")
 
     # Class names for detection
-    classNames = ['Capacete', 'Máscara', 'SEM-Capacete', 'SEM-Máscara', 'SEM-Colete', 'Pessoa', 'Colete']
+    classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 'Colete']
 
     while True:
         # Show message on the screen for 3 seconds
-        img = cv2.imread("/home/ideal_pad/Documentos/SafeView_v01/logo.png")  # Display a black screen or any image to show the message
+        img = cv2.imread("/home/ideal_pad/Documentos/SafeView_v01/BackEnd/logo.png")  # Display a black screen or any image to show the message
         cv2.putText(img, "Tirando foto em 3 segundos...", (200, 360), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
         cv2.imshow("Message", img)
         cv2.waitKey(1000)  # Show for 1 second
