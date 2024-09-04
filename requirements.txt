@@ -13,6 +13,8 @@ torchvision
 tqdm
 filterpy
 scikit-image
-flask_wtf
 WTForms
 Flask-WTF
+fastapi==0.112.2
+uvicorn==0.30.6
+firebase-admin==6.5.0
