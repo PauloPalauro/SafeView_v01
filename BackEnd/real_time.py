@@ -5,15 +5,12 @@ import math
 
 
 def ppe_detection(): 
-    # Initialize video capture with the default webcam
-    cap = cv2.VideoCapture(0)  # For Webcam
-    cap.set(3, 1280)  # Set width
-    cap.set(4, 720)   # Set height
+    cap = cv2.VideoCapture(0)  
+    cap.set(3, 1280)  
+    cap.set(4, 720)   
 
-    # Load YOLO model
     model = YOLO("/home/ideal_pad/Documentos/SafeView_v01/BackEnd/YOLO-Weights/ppe.pt")
 
-    # Class names for detection
     classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 
                   'Colete']
     
@@ -23,7 +20,7 @@ def ppe_detection():
             print("Failed to capture image from webcam.")
             break
         
-        # Run YOLO model on the captured frame
+        
         results = model(img, stream=True)
         for r in results:
             boxes = r.boxes
@@ -46,7 +43,6 @@ def ppe_detection():
                 
                 print(currentClass)
                 
-                # Set bounding box and text colors
                 if conf > 0.5:
                     if currentClass in ['SEM-Capacete', 'SEM-Colete', 'SEM-Mascara']:
                         myColor = (0, 0, 255)  # Red
@@ -55,20 +51,16 @@ def ppe_detection():
                     else:
                         myColor = (255, 0, 0)  # Blue
 
-                    # Draw bounding box and label
                     cvzone.putTextRect(img, f'{currentClass} {conf}',
                                        (max(0, x1), max(35, y1)), scale=2, thickness=2,
                                        colorB=myColor, colorT=(255, 255, 255), colorR=myColor, offset=6)
                     cv2.rectangle(img, (x1, y1), (x2, y2), myColor, 3)
 
-        # Show the image with detections
         cv2.imshow("Image", img)
 
-        # Wait for key press; if 'q' is pressed, exit loop
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    # Release the capture and close all OpenCV windows
     cap.release()
     cv2.destroyAllWindows()
 
