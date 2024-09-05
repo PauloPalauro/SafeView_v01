@@ -1,15 +1,18 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse, Response
+from pydantic import BaseModel
 import cv2
+import numpy as np
 from ultralytics import YOLO
 import cvzone
 import math
+import base64
 
 app = FastAPI()
 
 # Carregar o modelo YOLO
 model = YOLO("../../YOLO-Weights/ppe.pt")
-classNames = ['Capacete', 'Máscara', 'SEM-Capacete', 'SEM-Máscara', 'SEM-Colete', 'Pessoa', 'Colete']
+classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 'Colete']
 
 def analyze_image(img):
     # Executar o modelo YOLO na imagem capturada
@@ -37,9 +40,9 @@ def analyze_image(img):
             
             # Definir cores da caixa delimitadora e do texto
             if conf > 0.5:
-                if currentClass in ['SEM-Capacete', 'SEM-Colete', 'SEM-Máscara']:
+                if currentClass in ['SEM-Capacete', 'SEM-Colete', 'SEM-Mascara']:
                     myColor = (0, 0, 255)  # Vermelho
-                elif currentClass in ['Capacete', 'Colete', 'Máscara']:
+                elif currentClass in ['Capacete', 'Colete', 'Mascara']:
                     myColor = (0, 255, 0)  # Verde
                 else:
                     myColor = (255, 0, 0)  # Azul
@@ -52,23 +55,20 @@ def analyze_image(img):
 
     return img
 
+class ImageData(BaseModel):
+    image: str
+
 @app.get("/", response_class=FileResponse)
 async def index():
-    # Retorna o arquivo index.html diretamente
+    # Certifique-se de que o caminho para o index.html esteja correto
     return FileResponse("index.html")
 
-@app.get("/capture_image")
-async def capture_image():
-    # Inicializar captura de vídeo com a webcam padrão
-    cap = cv2.VideoCapture(0)
-    cap.set(3, 1280)  # Definir largura
-    cap.set(4, 720)   # Definir altura
-
-    # Capturar uma única imagem
-    success, img = cap.read()
-    if not success:
-        cap.release()
-        return {"error": "Failed to capture image"}
+@app.post("/analyze_image")
+async def analyze_image_endpoint(image_data: ImageData):
+    # Decodificar a imagem base64 recebida
+    image_bytes = base64.b64decode(image_data.image.split(",")[1])
+    np_arr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
     # Analisar a imagem usando o modelo YOLO
     analyzed_img = analyze_image(img)
@@ -76,11 +76,7 @@ async def capture_image():
     # Converter a imagem analisada para JPEG
     ret, buffer = cv2.imencode('.jpg', analyzed_img)
     if not ret:
-        cap.release()
         return {"error": "Failed to encode image"}
-
-    # Liberar a webcam
-    cap.release()
 
     # Retornar a imagem como uma resposta HTTP
     return Response(content=buffer.tobytes(), media_type="image/jpeg")

@@ -4,30 +4,94 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PPE Detection</title>
+    <title>EPI Detection</title>
     <style>
         body {
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
             background-color: #f0f0f0;
             font-family: Arial, sans-serif;
+            height: 100vh;
+            margin: 0;
+            background-color: rgb(73, 70, 70);
         }
-        #result {
+        #webcam-container, #result-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+        }
+        #webcam, #result {
             border: 2px solid #000;
+            width: 800px; /* Aumentando a largura */
+            height: 600px; /* Aumentando a altura */
+        }
+        #button-container {
+            display: flex;
+            justify-content: center;
             margin-top: 20px;
+        }
+        #capture-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <h1>PPE Detection</h1>
-    <button onclick="captureImage()">Capture Image</button>
-    <div>
-        <img id="result" width="1280" height="720" alt="Processed Image">
+    <h1>Detecção de EPI</h1>
+
+    <div style="display: flex; flex-direction: row;">
+        <div id="webcam-container">
+            <h1>Webcam</h1>
+            <video id="webcam" width="800" height="600" autoplay></video>
+        </div>
+        
+        <div id="result-container">
+            <h1>Resultado</h1>
+            <img id="result" width="800" height="600" alt="Processed Image">
+        </div>
     </div>
+
+    <div id="button-container">
+        <button id="capture-btn" onclick="captureImage()">Capturar</button>
+    </div>
+
     <script>
+        // Acessar a webcam e exibir o feed de vídeo
+        const video = document.getElementById('webcam');
+
+        async function startWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (error) {
+                console.error('Erro ao acessar a webcam:', error);
+            }
+        }
+
+        startWebcam();
+
         async function captureImage() {
-            const response = await fetch('/capture_image');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            // Enviar imagem capturada para o servidor
+            const response = await fetch('/analyze_image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: imageData })
+            });
+
             const blob = await response.blob();
             document.getElementById('result').src = URL.createObjectURL(blob);
         }
