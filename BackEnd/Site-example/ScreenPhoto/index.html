@@ -38,6 +38,10 @@
             font-size: 16px;
             cursor: pointer;
         }
+        #status {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
     </style>
 </head>
 <body>
@@ -54,10 +58,13 @@
             <img id="result" width="800" height="600" alt="Processed Image">
         </div>
     </div>
-
+    <h2 id="status"></h2>
     <div id="button-container">
+       
         <button id="capture-btn" onclick="captureImage()">Capturar</button>
     </div>
+
+
 
     <script>
         // Acessar a webcam e exibir o feed de vídeo
@@ -75,15 +82,18 @@
         startWebcam();
 
         async function captureImage() {
+            // Usar o ID correto para o vídeo
+            const video = document.getElementById('webcam');
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+            // Capturar a imagem da webcam e codificá-la em base64
             const imageData = canvas.toDataURL('image/jpeg');
 
-            // Enviar imagem capturada para o servidor
+            // Enviar a imagem para o servidor
             const response = await fetch('/analyze_image', {
                 method: 'POST',
                 headers: {
@@ -92,8 +102,21 @@
                 body: JSON.stringify({ image: imageData })
             });
 
-            const blob = await response.blob();
-            document.getElementById('result').src = URL.createObjectURL(blob);
+            const result = await response.json();
+
+            // Exibir a imagem analisada
+            const imgElement = document.getElementById('result');
+            imgElement.src = `data:image/jpeg;base64,${result.image}`;
+
+            // Exibir mensagem se estiver tudo em ordem
+            const statusElement = document.getElementById('status');
+            if (result.all_ok) {
+                statusElement.textContent = "TUDO EM ORDEM.";
+                statusElement.style.color = "green";
+            } else {
+                statusElement.textContent = "Itens de segurança em falta!";
+                statusElement.style.color = "red";
+            }
         }
     </script>
 </body>

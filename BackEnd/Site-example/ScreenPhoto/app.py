@@ -1,5 +1,5 @@
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, JSONResponse
 from pydantic import BaseModel
 import cv2
 import numpy as np
@@ -12,9 +12,12 @@ app = FastAPI()
 
 # Carregar o modelo YOLO
 model = YOLO("../../YOLO-Weights/ppe.pt")
-classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 'Colete']
+classNames = ['Capacete', 'Máscara', 'SEM-Capacete', 'SEM-Máscara', 'SEM-Colete', 'Pessoa', 'Colete']
 
 def analyze_image(img):
+    # Inicializa uma flag para verificar se tudo está em ordem
+    all_ok = True
+
     # Executar o modelo YOLO na imagem capturada
     results = model(img, stream=True)
     for r in results:
@@ -40,9 +43,10 @@ def analyze_image(img):
             
             # Definir cores da caixa delimitadora e do texto
             if conf > 0.5:
-                if currentClass in ['SEM-Capacete', 'SEM-Colete', 'SEM-Mascara']:
+                if currentClass in ['SEM-Capacete', 'SEM-Colete', 'SEM-Máscara']:
                     myColor = (0, 0, 255)  # Vermelho
-                elif currentClass in ['Capacete', 'Colete', 'Mascara']:
+                    all_ok = False  # Se algum item obrigatório estiver faltando, define all_ok como False
+                elif currentClass in ['Capacete', 'Colete', 'Máscara']:
                     myColor = (0, 255, 0)  # Verde
                 else:
                     myColor = (255, 0, 0)  # Azul
@@ -53,7 +57,7 @@ def analyze_image(img):
                                    colorB=myColor, colorT=(255, 255, 255), colorR=myColor, offset=6)
                 cv2.rectangle(img, (x1, y1), (x2, y2), myColor, 3)
 
-    return img
+    return img, all_ok
 
 class ImageData(BaseModel):
     image: str
@@ -71,15 +75,15 @@ async def analyze_image_endpoint(image_data: ImageData):
     img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
     # Analisar a imagem usando o modelo YOLO
-    analyzed_img = analyze_image(img)
+    analyzed_img, all_ok = analyze_image(img)
 
     # Converter a imagem analisada para JPEG
     ret, buffer = cv2.imencode('.jpg', analyzed_img)
     if not ret:
         return {"error": "Failed to encode image"}
 
-    # Retornar a imagem como uma resposta HTTP
-    return Response(content=buffer.tobytes(), media_type="image/jpeg")
+    # Retornar a imagem como uma resposta HTTP junto com o status
+    return JSONResponse(content={"image": base64.b64encode(buffer.tobytes()).decode('utf-8'), "all_ok": all_ok})
 
 if __name__ == "__main__":
     import uvicorn
