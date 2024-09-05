@@ -32,11 +32,18 @@ def generate_frames():
                 x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
                 w, h = x2 - x1, y2 - y1
 
-                # Confidence
+              # Confidence
                 conf = math.ceil((box.conf[0] * 100)) / 100
                 # Class Name
                 cls = int(box.cls[0])
-                currentClass = classNames[cls]
+                print(f"Class index: {cls}")
+
+                if cls < len(classNames):
+                    currentClass = classNames[cls]
+                else:
+                    currentClass = "Unknown"
+                
+                print(currentClass)
                 
                 # Set bounding box and text colors
                 if conf > 0.5:
