@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPE Detection</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #result {
+            border: 2px solid #000;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>PPE Detection</h1>
+    <button onclick="captureImage()">Capture Image</button>
+    <div>
+        <img id="result" width="1280" height="720" alt="Processed Image">
+    </div>
+    <script>
+        async function captureImage() {
+            const response = await fetch('/capture_image');
+            const blob = await response.blob();
+            document.getElementById('result').src = URL.createObjectURL(blob);
+        }
+    </script>
+</body>
+</html>

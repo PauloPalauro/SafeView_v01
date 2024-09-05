@@ -1,82 +1,86 @@
-from flask import Flask, Response, render_template
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse, FileResponse
 import cv2
 from ultralytics import YOLO
 import cvzone
 import math
 import time
 
-app = Flask(__name__)
+app = FastAPI()
 
-# Load YOLO model
-model = YOLO("/home/ideal_pad/Documentos/SafeView_v01/BackEnd/YOLO-Weights/ppe.pt")
+# Carregar o modelo YOLO
+model = YOLO("../../YOLO-Weights/ppe.pt")
 classNames = ['Capacete', 'Máscara', 'SEM-Capacete', 'SEM-Máscara', 'SEM-Colete', 'Pessoa', 'Colete']
 
 def generate_frames():
-    cap = cv2.VideoCapture(0)  # Initialize video capture with the default webcam
-    cap.set(3, 1280)  # Set width
-    cap.set(4, 720)   # Set height
+    cap = cv2.VideoCapture(0)  # Inicializar captura de vídeo com a webcam padrão
+    cap.set(3, 1280)  # Definir largura
+    cap.set(4, 720)   # Definir altura
     
     while True:
-        # Capture frame-by-frame
+        # Capturar frame
         success, img = cap.read()
         if not success:
             break
         
-        # Run YOLO model on the captured frame
+        # Executar o modelo YOLO no frame capturado
         results = model(img, stream=True)
         for r in results:
             boxes = r.boxes
             for box in boxes:
-                # Bounding Box
+                # Caixa delimitadora
                 x1, y1, x2, y2 = box.xyxy[0]
                 x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
                 w, h = x2 - x1, y2 - y1
 
-              # Confidence
+                # Confiança
                 conf = math.ceil((box.conf[0] * 100)) / 100
-                # Class Name
+                # Nome da Classe
                 cls = int(box.cls[0])
-                print(f"Class index: {cls}")
+                print(f"Índice da classe: {cls}")
 
                 if cls < len(classNames):
                     currentClass = classNames[cls]
                 else:
-                    currentClass = "Unknown"
+                    currentClass = "Desconhecido"
                 
                 print(currentClass)
                 
-                # Set bounding box and text colors
+                # Definir cores da caixa delimitadora e do texto
                 if conf > 0.5:
                     if currentClass in ['SEM-Capacete', 'SEM-Colete', 'SEM-Máscara']:
-                        myColor = (0, 0, 255)  # Red
+                        myColor = (0, 0, 255)  # Vermelho
                     elif currentClass in ['Capacete', 'Colete', 'Máscara']:
-                        myColor = (0, 255, 0)  # Green
+                        myColor = (0, 255, 0)  # Verde
                     else:
-                        myColor = (255, 0, 0)  # Blue
+                        myColor = (255, 0, 0)  # Azul
 
-                    # Draw bounding box and label
+                    # Desenhar caixa delimitadora e etiqueta
                     cvzone.putTextRect(img, f'{classNames[cls]} {conf}',
                                        (max(0, x1), max(35, y1)), scale=2, thickness=2,
                                        colorB=myColor, colorT=(255, 255, 255), colorR=myColor, offset=6)
                     cv2.rectangle(img, (x1, y1), (x2, y2), myColor, 3)
 
-        # Convert the frame to JPEG format
+        # Converter o frame para o formato JPEG
         ret, buffer = cv2.imencode('.jpg', img)
         frame = buffer.tobytes()
 
-        # Use generator to output frames
+        # Usar gerador para saída de frames
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
     cap.release()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+@app.get("/", response_class=FileResponse)
+async def index():
+    # Retorna o arquivo index.html diretamente
+    return FileResponse("index.html")
 
-@app.route('/video_feed')
-def video_feed():
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+@app.get("/video_feed")
+async def video_feed():
+    # Gera o feed de vídeo usando StreamingResponse
+    return StreamingResponse(generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

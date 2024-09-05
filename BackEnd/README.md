@@ -5,11 +5,16 @@ A pasta backend deste projeto consiste na logica do aplicativo/software para a d
 <br>
 
 ## Descrição dos arquivos:
-<strong> phot.py </strong> --> Tira uma foto pela webcam, manda para o modelo analisar e retorna a foto analisada.
+<strong> screenPhoto.py </strong> --> Tira uma foto pela webcam, manda para o modelo analisar e retorna a foto analisada.
 
-<strong> real_time.py </strong> --> Abre a Webcam e verifica em tempo real a detecção de EPI's.
+<strong> realTime.py </strong> --> Abre a Webcam e verifica em tempo real a detecção de EPI's.
 
-<strong> ppe.pt </strong> --> Modelo YOLOv8 que analisa a detecção de EPI.
+<strong> Modelo_YOLO/ppe.pt </strong> --> Modelo YOLOv8 que analisa a detecção de EPI.
+
+<strong> site-example/RealTime </strong> --> realTime.py em um site.
+
+<strong> site-example/ScreenPhoto </strong> --> screenPhoto.py em um site.
+
 <br>
 <br>
 ## Executar codigo:
