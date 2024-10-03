@@ -11,11 +11,10 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: #f0f0f0;
+            background-color: rgb(73, 70, 70);
             font-family: Arial, sans-serif;
             height: 100vh;
             margin: 0;
-            background-color: rgb(73, 70, 70);
         }
         #webcam-container, #result-container {
             display: flex;
@@ -25,8 +24,8 @@
         }
         #webcam, #result {
             border: 2px solid #000;
-            width: 800px; /* Aumentando a largura */
-            height: 600px; /* Aumentando a altura */
+            width: 800px;
+            height: 600px;
         }
         #button-container {
             display: flex;
@@ -50,7 +49,7 @@
     <div style="display: flex; flex-direction: row;">
         <div id="webcam-container">
             <h1>Webcam</h1>
-            <video id="webcam" width="800" height="600" autoplay></video>
+            <img id="webcam" width="800" height="600" alt="Webcam Feed">
         </div>
         
         <div id="result-container">
@@ -60,33 +59,26 @@
     </div>
     <h2 id="status"></h2>
     <div id="button-container">
-       
         <button id="capture-btn" onclick="captureImage()">Capturar</button>
     </div>
 
-
-
     <script>
-        // Acessar a webcam e exibir o feed de vídeo
-        const video = document.getElementById('webcam');
-
-        async function startWebcam() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-            } catch (error) {
-                console.error('Erro ao acessar a webcam:', error);
-            }
+        // Função para iniciar o feed de vídeo
+        function startVideoFeed() {
+            const webcam = document.getElementById('webcam');
+            webcam.src = '/video_feed';
+            webcam.onload = () => {
+                webcam.play();
+            };
         }
 
-        startWebcam();
+        startVideoFeed();
 
         async function captureImage() {
-            // Usar o ID correto para o vídeo
             const video = document.getElementById('webcam');
             const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            canvas.width = video.width;
+            canvas.height = video.height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
