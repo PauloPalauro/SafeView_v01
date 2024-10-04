@@ -7,6 +7,7 @@ from ultralytics import YOLO
 import cvzone
 import math
 import base64
+import time
 
 app = FastAPI()
 
@@ -62,57 +63,68 @@ def analyze_image(img):
     return img, all_ok
 
 
-
-
 def generate_frames():
     cap = cv2.VideoCapture(0)  # Inicializar captura de vídeo com a webcam padrão
     cap.set(3, 1280)  # Definir largura
     cap.set(4, 720)   # Definir altura
     
+    person_detected = False  # Flag para controlar a análise do YOLO
+    detection_pause_time = 0  # Tempo de pausa após a detecção
+
     while True:
         # Capturar frame
         success, img = cap.read()
         if not success:
             break
         
-        # Executar o modelo YOLO no frame capturado
-        results = model_person(img, stream=True, verbose=False, classes=[0])
+        current_time = time.time()  # Tempo atual
 
+        # Se a pessoa ainda não foi detectada ou a pausa já terminou, executar o modelo YOLO
+        if not person_detected or (current_time - detection_pause_time > 10):
+            # Resetar a flag após o tempo de pausa
+            if person_detected and (current_time - detection_pause_time > 10):
+                person_detected = False  # Permitir nova detecção após a pausa
 
-        for r in results:
-            boxes = r.boxes
-            for box in boxes:
-                # Caixa delimitadora
-                x1, y1, x2, y2 = box.xyxy[0]
-                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+            # Executar o modelo YOLO no frame capturado
+            results = model_person(img, stream=True, verbose=False, classes=[0])
 
-                # Confiança
-                conf = math.ceil((box.conf[0] * 100)) / 100
-                # Nome da Classe
-                cls = int(box.cls[0])
-                
-                if cls == 0 and conf > 0.5:  # Verifica se é uma pessoa e se a confiança é alta
-                    detections_found = True  # Atualiza a flag se uma detecção válida for encontrada
-                    print(f"Pessoa Detectada! Índice da classe: {cls}, Confiança: {conf}")  # Apenas imprime quando uma detecção é encontrada
+            for r in results:
+                boxes = r.boxes
+                for box in boxes:
+                    # Caixa delimitadora
+                    x1, y1, x2, y2 = box.xyxy[0]
+                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+
+                    # Confiança
+                    conf = math.ceil((box.conf[0] * 100)) / 100
+                    # Nome da Classe
+                    cls = int(box.cls[0])
                     
-                    # Definir cor da caixa delimitadora
-                    myColor = (0, 255, 0)  # Verde
-                    cv2.rectangle(img, (x1, y1), (x2, y2), myColor, 3)
+                    if cls == 0 and conf > 0.5:  # Verifica se é uma pessoa e se a confiança é alta
+                        person_detected = True  # Atualiza a flag se uma pessoa for detectada
+                        detection_pause_time = current_time  # Define o tempo da detecção
+                        print(f"Pessoa Detectada! Índice da classe: {cls}, Confiança: {conf}")  # Apenas imprime quando uma detecção é encontrada
+                        
+                        # Definir cor da caixa delimitadora
+                        myColor = (0, 255, 0)  # Verde
+                        cv2.rectangle(img, (x1, y1), (x2, y2), myColor, 3)
 
-                    # Desenhar texto com a confiança
-                    cvzone.putTextRect(img, f'Pessoa {conf:.2f}',  # Exibir confiança
-                                       (max(0, x1), max(35, y1)), scale=2, thickness=2,
-                                       colorB=myColor, colorT=(255, 255, 255), offset=6)
+                        # Desenhar texto com a confiança
+                        cvzone.putTextRect(img, f'Pessoa {conf:.2f}',  # Exibir confiança
+                                           (max(0, x1), max(35, y1)), scale=2, thickness=2,
+                                           colorB=myColor, colorT=(255, 255, 255), offset=6)
 
-            # Converter o frame para o formato JPEG
-            ret, buffer = cv2.imencode('.jpg', img)
-            frame = buffer.tobytes()
+        # Converter o frame para o formato JPEG
+        ret, buffer = cv2.imencode('.jpg', img)
+        frame = buffer.tobytes()
 
-            # Usar gerador para saída de frames
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        # Usar gerador para saída de frames
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
     cap.release()
+
+
 
 class ImageData(BaseModel):
     image: str

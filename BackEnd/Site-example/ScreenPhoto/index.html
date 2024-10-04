@@ -58,9 +58,6 @@
         </div>
     </div>
     <h2 id="status"></h2>
-    <div id="button-container">
-        <button id="capture-btn" onclick="captureImage()">Capturar</button>
-    </div>
 
     <script>
         // Função para iniciar o feed de vídeo
@@ -74,42 +71,6 @@
 
         startVideoFeed();
 
-        async function captureImage() {
-            const video = document.getElementById('webcam');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.width;
-            canvas.height = video.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Capturar a imagem da webcam e codificá-la em base64
-            const imageData = canvas.toDataURL('image/jpeg');
-
-            // Enviar a imagem para o servidor
-            const response = await fetch('/analyze_image', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ image: imageData })
-            });
-
-            const result = await response.json();
-
-            // Exibir a imagem analisada
-            const imgElement = document.getElementById('result');
-            imgElement.src = `data:image/jpeg;base64,${result.image}`;
-
-            // Exibir mensagem se estiver tudo em ordem
-            const statusElement = document.getElementById('status');
-            if (result.all_ok) {
-                statusElement.textContent = "TUDO EM ORDEM.";
-                statusElement.style.color = "green";
-            } else {
-                statusElement.textContent = "Itens de segurança em falta!";
-                statusElement.style.color = "red";
-            }
-        }
     </script>
 </body>
 </html>
