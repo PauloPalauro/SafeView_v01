@@ -149,25 +149,6 @@ async def video_feed():
     return StreamingResponse(generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 
-@app.post("/analyze_image")
-async def analyze_image_endpoint(image_data: ImageData):
-
-    # Decodificar a imagem base64 recebida
-    image_bytes = base64.b64decode(image_data.image.split(",")[1])
-    np_arr = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-    # Analisar a imagem usando o modelo YOLO
-    analyzed_img, all_ok = analyze_image(img)
-
-    # Converter a imagem analisada para JPEG
-    ret, buffer = cv2.imencode('.jpg', analyzed_img)
-    if not ret:
-        return {"error": "Failed to encode image"}
-
-    # Retornar a imagem como uma resposta HTTP junto com o status
-    return JSONResponse(content={"image": base64.b64encode(buffer.tobytes()).decode('utf-8'), "all_ok": all_ok})
-
 
 if __name__ == "__main__":
     import uvicorn
