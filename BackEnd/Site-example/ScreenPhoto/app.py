@@ -70,6 +70,7 @@ def generate_frames():
     
     person_detected = False  # Flag para controlar a análise do YOLO
     detection_pause_time = 0  # Tempo de pausa após a detecção
+    photo_taken = False  # Flag para controlar se a foto já foi tirada
 
     while True:
         # Capturar frame
@@ -84,6 +85,12 @@ def generate_frames():
             # Resetar a flag após o tempo de pausa
             if person_detected and (current_time - detection_pause_time > 10):
                 person_detected = False  # Permitir nova detecção após a pausa
+                if not photo_taken:
+                    # Tira uma foto quando os 10 segundos de pausa terminam
+                    photo_filename = f"webcam_photo_{int(current_time)}.jpg"
+                    cv2.imwrite(photo_filename, img)  # Salvar a foto
+                    print(f"Foto tirada e salva como {photo_filename}")
+                    photo_taken = True  # Evitar tirar múltiplas fotos após a pausa
 
             # Executar o modelo YOLO no frame capturado
             results = model_person(img, stream=True, verbose=False, classes=[0])
@@ -103,6 +110,7 @@ def generate_frames():
                     if cls == 0 and conf > 0.5:  # Verifica se é uma pessoa e se a confiança é alta
                         person_detected = True  # Atualiza a flag se uma pessoa for detectada
                         detection_pause_time = current_time  # Define o tempo da detecção
+                        photo_taken = False  # Reseta a flag para tirar nova foto após a próxima detecção
                         print(f"Pessoa Detectada! Índice da classe: {cls}, Confiança: {conf}")  # Apenas imprime quando uma detecção é encontrada
                         
                         # Definir cor da caixa delimitadora
