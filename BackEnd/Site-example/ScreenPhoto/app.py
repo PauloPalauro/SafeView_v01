@@ -8,6 +8,7 @@ import cvzone
 import math
 import base64
 import time
+import os
 
 app = FastAPI()
 
@@ -71,6 +72,7 @@ def generate_frames():
     person_detected = False  # Flag para controlar a análise do YOLO
     detection_pause_time = 0  # Tempo de pausa após a detecção
     photo_taken = False  # Flag para controlar se a foto já foi tirada
+    analysis_paused = False  # Flag para pausar a análise após tirar a foto
 
     while True:
         # Capturar frame
@@ -88,39 +90,50 @@ def generate_frames():
                 if not photo_taken:
                     # Tira uma foto quando os 10 segundos de pausa terminam
                     photo_filename = f"webcam_photo_{int(current_time)}.jpg"
-                    cv2.imwrite(photo_filename, img)  # Salvar a foto
-                    print(f"Foto tirada e salva como {photo_filename}")
+                    
+                    result_img, all_ok = analyze_image(img)  # Chama a função de análise de imagem
+                    photo_filename_result = f"result_photo_{int(current_time)}.jpg"
+                    cv2.imwrite(photo_filename_result, result_img)  # Salvar a imagem analisada
+                    print(f"Foto tirada e salva como {photo_filename_result}")
+                    print("Analise volta em 10 segundos.")
                     photo_taken = True  # Evitar tirar múltiplas fotos após a pausa
 
-            # Executar o modelo YOLO no frame capturado
-            results = model_person(img, stream=True, verbose=False, classes=[0])
+                    # Iniciar uma pausa de 5 segundos antes de continuar a análise
+                    analysis_paused = True
+                    pause_start_time = current_time
 
-            for r in results:
-                boxes = r.boxes
-                for box in boxes:
-                    # Caixa delimitadora
-                    x1, y1, x2, y2 = box.xyxy[0]
-                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+            # Executar o modelo YOLO no frame capturado apenas se a pausa de análise tiver terminado
+            if not analysis_paused or (current_time - pause_start_time > 10):
+                analysis_paused = False  # Pausa terminou, continuar análise
+                results = model_person(img, stream=True, verbose=False, classes=[0])
 
-                    # Confiança
-                    conf = math.ceil((box.conf[0] * 100)) / 100
-                    # Nome da Classe
-                    cls = int(box.cls[0])
-                    
-                    if cls == 0 and conf > 0.5:  # Verifica se é uma pessoa e se a confiança é alta
-                        person_detected = True  # Atualiza a flag se uma pessoa for detectada
-                        detection_pause_time = current_time  # Define o tempo da detecção
-                        photo_taken = False  # Reseta a flag para tirar nova foto após a próxima detecção
-                        print(f"Pessoa Detectada! Índice da classe: {cls}, Confiança: {conf}")  # Apenas imprime quando uma detecção é encontrada
+                for r in results:
+                    boxes = r.boxes
+                    for box in boxes:
+                        # Caixa delimitadora
+                        x1, y1, x2, y2 = box.xyxy[0]
+                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+
+                        # Confiança
+                        conf = math.ceil((box.conf[0] * 100)) / 100
+                        # Nome da Classe
+                        cls = int(box.cls[0])
                         
-                        # Definir cor da caixa delimitadora
-                        myColor = (0, 255, 0)  # Verde
-                        cv2.rectangle(img, (x1, y1), (x2, y2), myColor, 3)
+                        if cls == 0 and conf > 0.5:  # Verifica se é uma pessoa e se a confiança é alta
+                            person_detected = True  # Atualiza a flag se uma pessoa for detectada
+                            detection_pause_time = current_time  # Define o tempo da detecção
+                            photo_taken = False  # Reseta a flag para tirar nova foto após a próxima detecção
+                            print(f"Pessoa Detectada! Índice da classe: {cls}, Confiança: {conf}")  # Apenas imprime quando uma detecção é encontrada
+                            print("Foto para analise em 10 segundos")
+                            
+                            # Definir cor da caixa delimitadora
+                            myColor = (0, 255, 0)  # Verde
+                            cv2.rectangle(img, (x1, y1), (x2, y2), myColor, 3)
 
-                        # Desenhar texto com a confiança
-                        cvzone.putTextRect(img, f'Pessoa {conf:.2f}',  # Exibir confiança
-                                           (max(0, x1), max(35, y1)), scale=2, thickness=2,
-                                           colorB=myColor, colorT=(255, 255, 255), offset=6)
+                            # Desenhar texto com a confiança
+                            cvzone.putTextRect(img, f'Pessoa {conf:.2f}',  # Exibir confiança
+                                               (max(0, x1), max(35, y1)), scale=2, thickness=2,
+                                               colorB=myColor, colorT=(255, 255, 255), offset=6)
 
         # Converter o frame para o formato JPEG
         ret, buffer = cv2.imencode('.jpg', img)
@@ -133,10 +146,6 @@ def generate_frames():
     cap.release()
 
 
-
-class ImageData(BaseModel):
-    image: str
-
 @app.get("/", response_class=FileResponse)
 async def index():
     # Certifique-se de que o caminho para o index.html esteja correto
@@ -148,6 +157,14 @@ async def video_feed():
     # Gera o feed de vídeo usando StreamingResponse
     return StreamingResponse(generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
 
+
+@app.get("/result_photo/{filename}")
+async def result_photo(filename: str):
+    file_path = os.path.join(os.getcwd(), filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    else:
+        return JSONResponse(status_code=404, content={"message": "File not found"})
 
 
 if __name__ == "__main__":
