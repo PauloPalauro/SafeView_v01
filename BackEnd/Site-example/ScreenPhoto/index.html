@@ -49,7 +49,7 @@
     <div style="display: flex; flex-direction: row;">
         <div id="webcam-container">
             <h1>Webcam</h1>
-            <img id="webcam" width="800" height="600" alt="Webcam Feed">
+            <img id="webcam" src="/video_feed" width="800" height="600" alt="Webcam Feed">
         </div>
         
         <div id="result-container">
@@ -57,18 +57,9 @@
             <img id="result" width="800" height="600" alt="Processed Image">
         </div>
     </div>
-    <h2 id="status"></h2>
 
     <script>
-        // Função para iniciar o feed de vídeo
-        function startVideoFeed() {
-            const webcam = document.getElementById('webcam');
-            webcam.src = '/video_feed';
-            webcam.onload = () => {
-                webcam.play();
-            };
-        }
-        startVideoFeed();
+
 
     </script>
 </body>
