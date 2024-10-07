@@ -1,8 +1,5 @@
-import asyncio
-from typing import List
-from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response, JSONResponse, StreamingResponse
-from pydantic import BaseModel
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -11,13 +8,18 @@ import math
 import base64
 import time
 import os
+import torch
 
 app = FastAPI()
+
+clients = []
 
 # Carregar os modelos YOLO
 model = YOLO("../../YOLO-Weights/ppe.pt")
 model_person = YOLO("yolov8n.pt")
 model_person.classes = [0]
+
+last_analyzed_image_path = None
 
 classNames = ['Capacete', 'Máscara', 'SEM-Capacete', 'SEM-Máscara', 'SEM-Colete', 'Pessoa', 'Colete']
 
@@ -25,8 +27,10 @@ def draw_box(img, box, class_name, conf, color):
     x1, y1, x2, y2 = map(int, box.xyxy[0])
     cv2.rectangle(img, (x1, y1), (x2, y2), color, 3)
     cvzone.putTextRect(img, f'{class_name} {conf:.2f}', (max(0, x1), max(35, y1)), scale=2, thickness=2, colorB=color, colorT=(255, 255, 255), offset=6)
+    
 
 def analyze_image(img, save_path=None):
+    global last_analyzed_image_path
     all_ok = True
     results = model(img, stream=True)
     
@@ -41,14 +45,15 @@ def analyze_image(img, save_path=None):
                 if "SEM" in class_name:
                     all_ok = False
 
-    # Salvar a imagem se o caminho for fornecido
     if save_path:
         cv2.imwrite(save_path, img)
         print(f"Imagem salva em: {save_path}")
+        last_analyzed_image_path = save_path  # Atualizar o caminho da última imagem salva
     
     return img, all_ok
 
-async def generate_frames():
+
+def generate_frames():
     cap = cv2.VideoCapture(0)
     cap.set(3, 1280)
     cap.set(4, 720)
@@ -66,19 +71,18 @@ async def generate_frames():
         # Controle de pausa para detecção de pessoa
         if not person_detected or (current_time - detection_pause_time > 10):
             if person_detected and not photo_taken:
-                save_path = f"result_photo_{int(current_time)}.jpg"  # Caminho para salvar a imagem
-                result_img, all_ok = analyze_image(img, save_path=save_path)  # Salva diretamente na função
+                save_path = f"result_photo_{int(current_time)}.jpg"
+                result_img, all_ok = analyze_image(img, save_path)
                 print("Analise volta em 10")
-                photo_taken, analysis_paused, pause_printed = True, True, False  # Reset pause_printed
+                photo_taken, analysis_paused, pause_printed = True, True, False
                 pause_start_time = current_time
 
-            # Verifica se o tempo de pausa acabou
             if not analysis_paused or (current_time - pause_start_time > 10):
                 analysis_paused = False
                 
-                if not pause_printed:  # Mostra o print apenas uma vez quando a pausa acabar
+                if not pause_printed:
                     print("Análise voltou")
-                    pause_printed = True  # Garante que o print não será mostrado novamente até a próxima pausa
+                    pause_printed = True
 
                 results = model_person(img, stream=True, verbose=False, classes=[0])
                 for r in results:
@@ -94,12 +98,21 @@ async def generate_frames():
     cap.release()
 
 @app.get("/", response_class=FileResponse)
-async def index():
+def index():
     return FileResponse("index.html")
 
 @app.get("/video_feed")
-async def video_feed():
+def video_feed():
     return StreamingResponse(generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.get("/last_analyzed_image")
+def last_analyzed_image():
+    if last_analyzed_image_path and os.path.exists(last_analyzed_image_path):
+        return FileResponse(last_analyzed_image_path)
+    else:
+        raise HTTPException(status_code=404, detail="Nenhuma imagem analisada disponível no momento")
+
 
 if __name__ == "__main__":
     import uvicorn

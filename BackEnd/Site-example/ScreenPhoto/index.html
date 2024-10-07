@@ -59,8 +59,15 @@
     </div>
 
     <script>
+        // Função para atualizar a imagem do resultado
+        function updateResultImage() {
+            const resultImage = document.getElementById("result");
+            // Adiciona um parâmetro de timestamp para evitar cache
+            resultImage.src = `/last_analyzed_image?timestamp=${new Date().getTime()}`;
+        }
 
-
+        // Configura o intervalo para atualizar a imagem a cada 5 segundos
+        setInterval(updateResultImage, 5000);
     </script>
 </body>
 </html>
