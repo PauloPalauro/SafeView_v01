@@ -27,47 +27,60 @@
             width: 800px;
             height: 600px;
         }
-        #button-container {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        #capture-btn {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        #status {
+        #alerts {
             margin-top: 20px;
             font-size: 1.2em;
+            color: #fff;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <h1>Detecção de EPI</h1>
+    <h1 style="color: #fff;">Detecção de EPI</h1>
 
     <div style="display: flex; flex-direction: row;">
         <div id="webcam-container">
-            <h1>Webcam</h1>
+            <h1 style="color: #fff;">Webcam</h1>
             <img id="webcam" src="/video_feed" width="800" height="600" alt="Webcam Feed">
         </div>
         
         <div id="result-container">
-            <h1>Resultado</h1>
+            <h1 style="color: #fff;">Resultado</h1>
             <img id="result" width="800" height="600" alt="Processed Image">
         </div>
     </div>
 
-    <script>
-        // Função para atualizar a imagem do resultado
-        function updateResultImage() {
-            const resultImage = document.getElementById("result");
-            // Adiciona um parâmetro de timestamp para evitar cache
-            resultImage.src = `/last_analyzed_image?timestamp=${new Date().getTime()}`;
-        }
+    <div id="alerts">Aguardando análise...</div>
 
-        // Configura o intervalo para atualizar a imagem a cada 5 segundos
-        setInterval(updateResultImage, 5000);
+    <script>
+        var ws = new WebSocket("ws://localhost:8001/ws");
+
+        ws.onopen = function() {
+            console.log("Conectado ao WebSocket");
+        };
+
+        ws.onmessage = function(event) {
+            var data = event.data;
+
+            if (data.startsWith("img:")) {
+                // Trata como imagem
+                var imageBase64 = data.substring(4);  // Remove o prefixo "img:"
+                document.getElementById("result").src = "data:image/jpeg;base64," + imageBase64;
+            } else if (data.startsWith("msg:")) {
+                // Trata como mensagem de texto
+                var message = data.substring(4);  // Remove o prefixo "msg:"
+                document.getElementById("alerts").textContent = message;
+            }
+        };
+
+        ws.onclose = function() {
+            console.log("WebSocket desconectado");
+            document.getElementById("alerts").textContent = "Conexão perdida com o servidor.";
+        };
+
+        ws.onerror = function(error) {
+            console.log("Erro no WebSocket:", error);
+        };
     </script>
 </body>
 </html>
