@@ -30,11 +30,11 @@ def draw_box(img, box, class_name, conf, color):
     cvzone.putTextRect(img, f'{class_name} {conf:.2f}', (max(0, x1), max(35, y1)), scale=2, thickness=2, colorB=color, colorT=(255, 255, 255), offset=6)
 
 
-async def send_message_to_clients(message):
+async def send_message_to_clients(message, prefix):
     for client in clients:
         try:
-            # Prefixo "msg:" para mensagens de texto
-            await client.send_text(f"msg:{message}")
+            # Envia a mensagem com o prefixo especificado
+            await client.send_text(f"{prefix}:{message}")
         except WebSocketDisconnect:
             clients.remove(client)
 
@@ -66,6 +66,12 @@ async def analyze_image(img, save_path=None, websocket=None):
                 encoded_image = base64.b64encode(image_data).decode('utf-8')
                 await websocket.send_text(encoded_image)
     
+    # Exibir no console o status da análise
+    if all_ok:
+        await send_message_to_clients("Todos os itens de segurança presentes.", "sec")
+    else:
+        await send_message_to_clients("Imagem com itens de segurança em falta.", "sec")
+    
     return img, all_ok
 
 
@@ -88,14 +94,14 @@ def generate_frames():
                 if person_detected and not photo_taken:
                     save_path = f"result_photo_{int(current_time)}.jpg"
                     asyncio.run(analyze_image(img, save_path))
-                    asyncio.run(send_message_to_clients("Analise volta em 10"))  # Envia a mensagem
+                    asyncio.run(send_message_to_clients("Analise volta em 10", "msg"))  # Envia a mensagem
                     photo_taken, analysis_paused, pause_printed = True, True, False
                     pause_start_time = current_time
 
                 if not analysis_paused or (current_time - pause_start_time > 10):
                     analysis_paused = False
                     if not pause_printed:
-                        asyncio.run(send_message_to_clients("Análise voltou"))
+                        asyncio.run(send_message_to_clients("Análise voltou", "msg"))
                         pause_printed = True
 
                     results = model_person(img, stream=True, verbose=False, classes=[0])
@@ -103,7 +109,7 @@ def generate_frames():
                         for box in r.boxes:
                             if int(box.cls[0]) == 0 and box.conf[0] > 0.5:
                                 person_detected, detection_pause_time, photo_taken = True, current_time, False
-                                asyncio.run(send_message_to_clients("Pessoa Detectada. Tirando foto em 10 segundos"))
+                                asyncio.run(send_message_to_clients("Pessoa Detectada. Tirando foto em 10 segundos", "msg"))
                                 draw_box(img, box, "Pessoa", box.conf[0], (0, 255, 0))
 
             ret, buffer = cv2.imencode('.jpg', img)
