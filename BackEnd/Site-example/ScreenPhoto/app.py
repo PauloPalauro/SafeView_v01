@@ -19,7 +19,6 @@ clients = []
 # Carregar os modelos YOLO
 model = YOLO("../../YOLO-Weights/ppe.pt")
 model_person = YOLO("yolov8n.pt")
-model_person.classes = [0]
 last_analyzed_image_path = None
 classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 'Colete']
 

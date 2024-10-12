@@ -103,16 +103,25 @@
                 var message = data.substring(4);  
                 alerts.textContent = "Status: " + message;
 
+                // Iniciar a contagem regressiva com base nas mensagens específicas
+                if (message === "Analise volta em 10") {
+                    startCountdown(10, alerts);
+                } else if (message === "Pessoa Detectada. Tirando foto em 10 segundos") {
+                    startCountdown(10, alerts);
+                }
+
             } else {
-                var message = data.substring(4);  // Remove o prefixo "msg:"
-                document.getElementById("security").textContent = message;
+                var message = data.substring(4);
+                var security = document.getElementById("security");
+                security.textContent = message;
+                
                 // Change color based on message content
                 if (message === "Todos os itens de segurança presentes.") {
-                    security.style.color = "#00ff00";  // green
+                    security.style.color = "#00ff00";
                 } else if (message === "Imagem com itens de segurança em falta.") {
-                    security.style.color = "#ff0000";  // red
+                    security.style.color = "#ff0000";
                 } else {
-                    security.style.color = "#ffd700";  // default color
+                    security.style.color = "#ffd700";
                 }
             }
         };
@@ -125,6 +134,20 @@
         ws.onerror = function(error) {
             console.log("Erro no WebSocket:", error);
         };
+
+        function startCountdown(seconds, messageElement) {
+            let timeLeft = seconds;
+
+            const countdownInterval = setInterval(() => {
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    messageElement.textContent = "Status: Aguardando análise...";
+                } else {
+                    messageElement.textContent = `Status: ${timeLeft} segundos restantes...`;
+                    timeLeft -= 1;
+                }
+            }, 1000);
+        }
     </script>
 </body>
 </html>
