@@ -20,3 +20,7 @@ uvicorn==0.30.6
 firebase-admin==6.5.0
 bcrypt==3.2.0
 uvicorn[standard]
+face_recognition
+numpy
+opencv-python
+

@@ -55,7 +55,15 @@ async def analyze_image(img, save_path=None, websocket=None):
                 if "SEM" in class_name:
                     all_ok = False
 
+    # Definir o diretório de destino com base no resultado da análise
     if save_path:
+        directory = "ok_result" if all_ok else "not_ok_result"
+        # Criar o diretório se ele não existir
+        os.makedirs(directory, exist_ok=True)
+        # Atualizar o caminho de save_path com o diretório apropriado
+        save_path = os.path.join(directory, os.path.basename(save_path))
+        
+        # Salvar a imagem no diretório apropriado
         cv2.imwrite(save_path, img)
         last_analyzed_image_path = save_path  # Atualizar o caminho da última imagem salva
         
