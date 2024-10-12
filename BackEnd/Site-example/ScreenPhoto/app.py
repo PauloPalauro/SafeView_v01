@@ -1,4 +1,5 @@
 import asyncio
+import face_recognition
 from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response, JSONResponse, StreamingResponse
 import cv2
@@ -19,10 +20,36 @@ clients = []
 model = YOLO("../../YOLO-Weights/ppe.pt")
 model_person = YOLO("yolov8n.pt")
 model_person.classes = [0]
-
 last_analyzed_image_path = None
+classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 'Colete']
 
-classNames = ['Capacete', 'Máscara', 'SEM-Capacete', 'SEM-Máscara', 'SEM-Colete', 'Pessoa', 'Colete']
+
+def carregar_base_dados(diretorio_base):
+    return {
+        os.path.splitext(arquivo)[0]: face_recognition.face_encodings(
+            face_recognition.load_image_file(os.path.join(diretorio_base, arquivo)))[0]
+        for arquivo in os.listdir(diretorio_base)
+        if arquivo.endswith(('.jpg', '.jpeg', '.png')) and face_recognition.face_encodings(
+            face_recognition.load_image_file(os.path.join(diretorio_base, arquivo)))
+    }
+
+
+def reconhecer_face(imagem_teste, base_dados):
+    img_teste = face_recognition.load_image_file(imagem_teste)
+    encodings_faces = face_recognition.face_encodings(img_teste, face_recognition.face_locations(img_teste))
+
+    for face_encoding in encodings_faces:
+        distancias = face_recognition.face_distance(list(base_dados.values()), face_encoding)
+        indice_melhor = distancias.argmin()
+        return list(base_dados.keys())[indice_melhor] if distancias[indice_melhor] < 0.6 else "Desconhecido"
+    
+    return "Desconhecido"
+
+
+# Carregar a base de dados de rostos
+diretorio_base = '/home/ideal_pad/Documentos/Projetos/SafeView_v01/BackEnd/Site-example/ScreenPhoto/faces'
+base_dados = carregar_base_dados(diretorio_base)
+
 
 def draw_box(img, box, class_name, conf, color):
     x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -33,7 +60,6 @@ def draw_box(img, box, class_name, conf, color):
 async def send_message_to_clients(message, prefix):
     for client in clients:
         try:
-            # Envia a mensagem com o prefixo especificado
             await client.send_text(f"{prefix}:{message}")
         except WebSocketDisconnect:
             clients.remove(client)
@@ -42,6 +68,18 @@ async def send_message_to_clients(message, prefix):
 async def analyze_image(img, save_path=None, websocket=None):
     global last_analyzed_image_path
     all_ok = True
+
+    # Salvar imagem temporária para reconhecimento de rosto
+    temp_image_path = "temp_image.jpg"
+    cv2.imwrite(temp_image_path, img)
+    
+    # Reconhecer rosto da pessoa antes da análise YOLO
+    nome_pessoa = reconhecer_face(temp_image_path, base_dados)
+    if nome_pessoa == "Desconhecido":
+        nome_pessoa = "Pessoa desconhecida"
+    print(f"Nome reconhecido: {nome_pessoa}")
+    
+    # Prosseguir com a análise da imagem com o modelo YOLO
     results = model(img, stream=True)
     
     for r in results:
@@ -58,14 +96,12 @@ async def analyze_image(img, save_path=None, websocket=None):
     # Definir o diretório de destino com base no resultado da análise
     if save_path:
         directory = "ok_result" if all_ok else "not_ok_result"
-        # Criar o diretório se ele não existir
         os.makedirs(directory, exist_ok=True)
-        # Atualizar o caminho de save_path com o diretório apropriado
         save_path = os.path.join(directory, os.path.basename(save_path))
         
         # Salvar a imagem no diretório apropriado
         cv2.imwrite(save_path, img)
-        last_analyzed_image_path = save_path  # Atualizar o caminho da última imagem salva
+        last_analyzed_image_path = save_path
         
         # Enviar imagem via WebSocket
         if websocket:
@@ -74,11 +110,11 @@ async def analyze_image(img, save_path=None, websocket=None):
                 encoded_image = base64.b64encode(image_data).decode('utf-8')
                 await websocket.send_text(encoded_image)
     
-    # Exibir no console o status da análise
+    # Enviar mensagem de status
     if all_ok:
-        await send_message_to_clients("Todos os itens de segurança presentes.", "sec")
+        await send_message_to_clients(f"Todos os itens de segurança presentes para {nome_pessoa}.", "sec")
     else:
-        await send_message_to_clients("Imagem com itens de segurança em falta.", "sec")
+        await send_message_to_clients(f"Imagem com itens de segurança em falta para {nome_pessoa}.", "sec")
     
     return img, all_ok
 
@@ -102,7 +138,7 @@ def generate_frames():
                 if person_detected and not photo_taken:
                     save_path = f"result_photo_{int(current_time)}.jpg"
                     asyncio.run(analyze_image(img, save_path))
-                    asyncio.run(send_message_to_clients("Analise volta em 10", "msg"))  # Envia a mensagem
+                    asyncio.run(send_message_to_clients("Analise volta em 10", "msg"))
                     photo_taken, analysis_paused, pause_printed = True, True, False
                     pause_start_time = current_time
 
@@ -126,7 +162,6 @@ def generate_frames():
         cap.release()
 
 
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -138,7 +173,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 with open(last_analyzed_image_path, "rb") as image_file:
                     image_data = image_file.read()
                     encoded_image = base64.b64encode(image_data).decode('utf-8')
-                    # Prefixo "img:" para imagens
                     await websocket.send_text(f"img:{encoded_image}")
                 last_sent_image = last_analyzed_image_path
             await asyncio.sleep(1)

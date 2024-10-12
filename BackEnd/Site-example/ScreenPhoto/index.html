@@ -81,7 +81,7 @@
         </div>
     </div>
 
-    <h2 id="alerts">Aguardando análise...</h2>
+    <h2 id="alerts">Status: Aguardando análise...</h2>
     <h2 id="security"></h2>
 
     <script>
@@ -96,12 +96,12 @@
             var alerts = document.getElementById("alerts");
 
             if (data.startsWith("img:")) {
-                var imageBase64 = data.substring(4);  // Remove o prefixo "img:"
+                var imageBase64 = data.substring(4);  
                 document.getElementById("result").src = "data:image/jpeg;base64," + imageBase64;
 
             } else if (data.startsWith("msg:")) {
-                var message = data.substring(4);  // Remove o prefixo "msg:"
-                alerts.textContent = message;
+                var message = data.substring(4);  
+                alerts.textContent = "Status: " + message;
 
             } else {
                 var message = data.substring(4);  // Remove o prefixo "msg:"
