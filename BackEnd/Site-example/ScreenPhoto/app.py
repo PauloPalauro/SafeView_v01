@@ -137,14 +137,14 @@ def generate_frames():
                 if person_detected and not photo_taken:
                     save_path = f"result_photo_{int(current_time)}.jpg"
                     asyncio.run(analyze_image(img, save_path))
-                    asyncio.run(send_message_to_clients("Analise volta em 10", "msg"))
+                    asyncio.run(send_message_to_clients("Analise volta em 10 segundos", "msg"))
                     photo_taken, analysis_paused, pause_printed = True, True, False
                     pause_start_time = current_time
 
                 if not analysis_paused or (current_time - pause_start_time > 10):
                     analysis_paused = False
                     if not pause_printed:
-                        asyncio.run(send_message_to_clients("Análise voltou", "msg"))
+                        asyncio.run(send_message_to_clients("Análise Disponivel", "msg"))
                         pause_printed = True
 
                     results = model_person(img, stream=True, verbose=False, classes=[0])
