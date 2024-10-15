@@ -9,7 +9,7 @@ def ppe_detection():
     cap.set(3, 1280)  
     cap.set(4, 720)   
 
-    model = YOLO("/home/ideal_pad/Documentos/SafeView_v01/BackEnd/YOLO-Weights/ppe.pt")
+    model = YOLO("/home/ideal_pad/Documentos/Projetos/SafeView_v01/BackEnd/YOLO-Weights/ppe.pt")
 
     classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 
                   'Colete']
