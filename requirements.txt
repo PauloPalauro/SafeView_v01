@@ -23,4 +23,5 @@ uvicorn[standard]
 face_recognition
 numpy
 opencv-python
+fpdf
 

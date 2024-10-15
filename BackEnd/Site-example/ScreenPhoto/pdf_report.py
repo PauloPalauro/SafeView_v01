@@ -1,7 +1,9 @@
+import uuid
 from fpdf import FPDF
 import os
 import random
 from datetime import datetime
+
 
 class PDF(FPDF):
     def header(self):
@@ -37,10 +39,11 @@ def create_pdf_report(nome_pessoa, all_ok, analyzed_image_path):
     data_hora_nome = now.strftime("%d-%m-%y %H-%M")  # Formato de nome de arquivo seguro
     
     # Gerar um ID aleatório para o relatório
-    report_id = random.randint(1000, 9999)
+    report_id = uuid.uuid4().int >> 64
+    report_id_str = str(report_id) 
     
     # Nome do arquivo PDF com ID, nome e data
-    pdf_filename = f"{report_id} - {nome_pessoa} - {data_hora_nome}.pdf"
+    pdf_filename = f"{report_id_str} - {nome_pessoa} - {data_hora_nome}.pdf"
     pdf_output_path = os.path.join(pdf_directory, pdf_filename)
 
     # Gerar o PDF
@@ -80,8 +83,4 @@ def create_pdf_report(nome_pessoa, all_ok, analyzed_image_path):
     
     return pdf_output_path
 
-nome_pessoa = "A"
-all_OK = True
-analyzed_image_path = "/home/ideal_pad/Documentos/SafeView_v01/BackEnd/Site-example/ScreenPhoto/not_ok_result/result_photo_1729020598.jpg"
 
-create_pdf_report(nome_pessoa, all_OK, analyzed_image_path )
