@@ -57,7 +57,7 @@ def draw_box(img, box, class_name, conf, color):
     cvzone.putTextRect(img, f'{class_name} {conf:.2f}', (max(0, x1), max(35, y1)), scale=2, thickness=2, colorB=color, colorT=(255, 255, 255), offset=6)
     
     
-def create_pdf_report(nome_pessoa, all_ok, analyzed_image_path, equipamentos_status):
+def create_pdf_report(nome_pessoa, all_ok, analyzed_image_path):
     # Criar diretório para relatórios
     pdf_directory = "relatorios"
     os.makedirs(pdf_directory, exist_ok=True)
@@ -89,12 +89,6 @@ def create_pdf_report(nome_pessoa, all_ok, analyzed_image_path, equipamentos_sta
     pdf.cell(0, 10, f"Status de Segurança: {'OK' if all_ok else 'Faltando itens de segurança'}", ln=True)
     pdf.cell(0, 10, f"Data e Hora da Análise: {data_hora}", ln=True)  # Adiciona a data e hora
 
-    # Lista de equipamentos no PDF
-    pdf.ln(10)
-    pdf.cell(0, 10, "Lista de Equipamentos:", ln=True)
-    for equipamento, status in equipamentos_status.items():
-        pdf.cell(0, 10, f"{equipamento}: {status}", ln=True)
-
     # Inserir a imagem analisada no PDF
     pdf.ln(10)
     pdf.cell(0, 10, "Imagem Analisada:", ln=True)
@@ -104,6 +98,7 @@ def create_pdf_report(nome_pessoa, all_ok, analyzed_image_path, equipamentos_sta
     pdf.output(pdf_output_path)
     
     return pdf_output_path
+
 
 async def send_message_to_clients(message, prefix):
     for client in clients:
@@ -116,23 +111,15 @@ async def send_message_to_clients(message, prefix):
 async def analyze_image(img, save_path=None, websocket=None):
     global last_analyzed_image_path
     all_ok = True
-    
+
     # Salvar imagem temporária para reconhecimento de rosto
     temp_image_path = "temp_image.jpg"
     cv2.imwrite(temp_image_path, img)
     
-    # Reconhecer rosto da pessoa antes da análise YOLO
     nome_pessoa = reconhecer_face(temp_image_path, base_dados)
     if nome_pessoa == "Desconhecido":
         nome_pessoa = "Pessoa desconhecida"
     print(f"Nome reconhecido: {nome_pessoa}")
-    
-    # Inicializar o dicionário para o status dos equipamentos como "Em falta"
-    equipamentos_status = {
-        "Capacete": "Em falta",
-        "Mascara": "Em falta",
-        "Colete": "Em falta"
-    }
     
     # Prosseguir com a análise da imagem com o modelo YOLO
     results = model(img, stream=True)
@@ -141,21 +128,11 @@ async def analyze_image(img, save_path=None, websocket=None):
         for box in r.boxes:
             cls = int(box.cls[0])
             conf = box.conf[0]
-            if cls < len(classNames) and conf > 0.6:
+            if cls < len(classNames) and conf > 0.5:
                 class_name = classNames[cls]
-                
-                # Atualizar o status de cada equipamento com base na análise
-                if "Hardhat" in class_name:
-                    equipamentos_status["Capacete"] = "OK"
-                if "Mask" in class_name:
-                    equipamentos_status["Mascara"] = "OK"
-                if "Safety Vest" in class_name:
-                    equipamentos_status["Colete"] = "OK"
-
-                # Definir cor de caixa para "SEM" e atualizar all_ok
-                color = (0, 0, 255) if "NO-" in class_name else (0, 255, 0)
+                color = (0, 0, 255) if "SEM" in class_name else (0, 255, 0)
                 draw_box(img, box, class_name, conf, color)
-                if "NO-" in class_name:
+                if "SEM" in class_name:
                     all_ok = False
 
     # Definir o diretório de destino com base no resultado da análise
@@ -182,7 +159,7 @@ async def analyze_image(img, save_path=None, websocket=None):
         await send_message_to_clients(f"Imagem com itens de segurança em falta para {nome_pessoa}.", "sec")
 
     # Chamar a função para criar o relatório em PDF
-    pdf_output_path = create_pdf_report(nome_pessoa, all_ok, save_path, equipamentos_status)
+    pdf_output_path = create_pdf_report(nome_pessoa, all_ok, save_path)
     print(f"Relatório PDF salvo em: {pdf_output_path}")
     
     return img, all_ok, pdf_output_path
