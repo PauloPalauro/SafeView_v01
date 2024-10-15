@@ -1,4 +1,5 @@
 import asyncio
+import random
 import face_recognition
 from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response, JSONResponse, StreamingResponse
@@ -6,11 +7,11 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 import cvzone
-import math
 import base64
 import time
 import os
-import torch
+from fpdf import FPDF
+from datetime import datetime
 
 app = FastAPI()
 
@@ -54,6 +55,49 @@ def draw_box(img, box, class_name, conf, color):
     x1, y1, x2, y2 = map(int, box.xyxy[0])
     cv2.rectangle(img, (x1, y1), (x2, y2), color, 3)
     cvzone.putTextRect(img, f'{class_name} {conf:.2f}', (max(0, x1), max(35, y1)), scale=2, thickness=2, colorB=color, colorT=(255, 255, 255), offset=6)
+    
+    
+def create_pdf_report(nome_pessoa, all_ok, analyzed_image_path):
+    # Criar diretório para relatórios
+    pdf_directory = "relatorios"
+    os.makedirs(pdf_directory, exist_ok=True)
+    
+    # Obter a data e hora atual e formatar para o nome do arquivo
+    now = datetime.now()
+    data_hora = now.strftime("%d/%m/%Y %H:%M:%S")
+    data_hora_nome = now.strftime("%d-%m-%y %H-%M")  # Formato de nome de arquivo seguro
+    
+    # Gerar um ID aleatório para o relatório
+    report_id = random.randint(1000, 9999)
+    
+    # Nome do arquivo PDF com ID, nome e data
+    pdf_filename = f"{report_id} - {nome_pessoa} - {data_hora_nome}.pdf"
+    pdf_output_path = os.path.join(pdf_directory, pdf_filename)
+
+    # Gerar o PDF
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    
+    # Título do relatório
+    pdf.cell(0, 10, "Relatório de Análise de Segurança", ln=True, align="C")
+    
+    # Detalhes do relatório
+    pdf.set_font("Arial", size=12)
+    pdf.ln(10)
+    pdf.cell(0, 10, f"Nome: {nome_pessoa}", ln=True)
+    pdf.cell(0, 10, f"Status de Segurança: {'OK' if all_ok else 'Faltando itens de segurança'}", ln=True)
+    pdf.cell(0, 10, f"Data e Hora da Análise: {data_hora}", ln=True)  # Adiciona a data e hora
+
+    # Inserir a imagem analisada no PDF
+    pdf.ln(10)
+    pdf.cell(0, 10, "Imagem Analisada:", ln=True)
+    pdf.image(analyzed_image_path, x=10, y=pdf.get_y() + 10, w=100)
+    
+    # Salvar o PDF
+    pdf.output(pdf_output_path)
+    
+    return pdf_output_path
 
 
 async def send_message_to_clients(message, prefix):
@@ -72,7 +116,6 @@ async def analyze_image(img, save_path=None, websocket=None):
     temp_image_path = "temp_image.jpg"
     cv2.imwrite(temp_image_path, img)
     
-    # Reconhecer rosto da pessoa antes da análise YOLO
     nome_pessoa = reconhecer_face(temp_image_path, base_dados)
     if nome_pessoa == "Desconhecido":
         nome_pessoa = "Pessoa desconhecida"
@@ -114,8 +157,12 @@ async def analyze_image(img, save_path=None, websocket=None):
         await send_message_to_clients(f"Todos os itens de segurança presentes para {nome_pessoa}.", "sec")
     else:
         await send_message_to_clients(f"Imagem com itens de segurança em falta para {nome_pessoa}.", "sec")
+
+    # Chamar a função para criar o relatório em PDF
+    pdf_output_path = create_pdf_report(nome_pessoa, all_ok, save_path)
+    print(f"Relatório PDF salvo em: {pdf_output_path}")
     
-    return img, all_ok
+    return img, all_ok, pdf_output_path
 
 
 def generate_frames():
