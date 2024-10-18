@@ -1,17 +1,15 @@
 import asyncio
-import random
 import face_recognition
 from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, Response, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 import cv2
 import numpy as np
 from ultralytics import YOLO
 import cvzone
 import base64
 import time
-import os
-from fpdf import FPDF
-from datetime import datetime
+from io import BytesIO
+from face_recognition_module import carregar_base_dados, reconhecer_face
 from pdf_report import create_pdf_report
 
 app = FastAPI()
@@ -21,31 +19,7 @@ clients = []
 # Carregar os modelos YOLO
 model = YOLO("../YOLO-Weights/ppe.pt")
 model_person = YOLO("../YOLO-Weights/yolov8n.pt")
-last_analyzed_image_path = None
 classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 'Colete']
-
-
-def carregar_base_dados(diretorio_base):
-    return {
-        os.path.splitext(arquivo)[0]: face_recognition.face_encodings(
-            face_recognition.load_image_file(os.path.join(diretorio_base, arquivo)))[0]
-        for arquivo in os.listdir(diretorio_base)
-        if arquivo.endswith(('.jpg', '.jpeg', '.png')) and face_recognition.face_encodings(
-            face_recognition.load_image_file(os.path.join(diretorio_base, arquivo)))
-    }
-
-
-def reconhecer_face(imagem_teste, base_dados):
-    img_teste = face_recognition.load_image_file(imagem_teste)
-    encodings_faces = face_recognition.face_encodings(img_teste, face_recognition.face_locations(img_teste))
-
-    for face_encoding in encodings_faces:
-        distancias = face_recognition.face_distance(list(base_dados.values()), face_encoding)
-        indice_melhor = distancias.argmin()
-        return list(base_dados.keys())[indice_melhor] if distancias[indice_melhor] < 0.6 else "Desconhecido"
-    
-    return "Desconhecido"
-
 
 # Carregar a base de dados de rostos
 diretorio_base = '/home/ideal_pad/Documentos/Projetos/SafeView_v01/BackEnd/ScreenShot/faces'
@@ -56,8 +30,7 @@ def draw_box(img, box, class_name, conf, color):
     x1, y1, x2, y2 = map(int, box.xyxy[0])
     cv2.rectangle(img, (x1, y1), (x2, y2), color, 3)
     cvzone.putTextRect(img, f'{class_name} {conf:.2f}', (max(0, x1), max(35, y1)), scale=2, thickness=2, colorB=color, colorT=(255, 255, 255), offset=6)
-    
-    
+
 
 async def send_message_to_clients(message, prefix):
     for client in clients:
@@ -72,12 +45,9 @@ async def analyze_image(img, websocket=None):
 
     # Converter imagem para formato que o face_recognition pode usar
     temp_image = cv2.imencode('.jpg', img)[1].tobytes()
-    
-    # Usar BytesIO para não precisar salvar no disco
-    from io import BytesIO
     temp_buffer = BytesIO(temp_image)
-    
-    # Reconhecimento facial direto da memória
+
+    # Reconhecimento facial
     nome_pessoa = "Pessoa desconhecida"
     try:
         face_image = face_recognition.load_image_file(temp_buffer)
@@ -122,6 +92,7 @@ async def analyze_image(img, websocket=None):
     print(f"Relatório PDF criado: {pdf_output_path}")
     
     return img, all_ok, pdf_output_path
+
 
 def generate_frames():
     cap = cv2.VideoCapture(0)
@@ -171,8 +142,8 @@ def generate_frames():
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
     finally:
         cap.release()
-        
-        
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
