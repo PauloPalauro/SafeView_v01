@@ -9,9 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  google_fonts: ^6.2.1
-  http: ^1.2.2
+  google_fonts: ^4.0.4
+  http: ^0.13.6
+  video_player: ^2.9.2
+  web_socket_channel: ^3.0.1
   window_manager: ^0.4.2
+  flutter_mjpeg: ^2.0.4
   
 
 dev_dependencies:
