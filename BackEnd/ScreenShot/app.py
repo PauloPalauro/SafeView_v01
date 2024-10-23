@@ -22,7 +22,7 @@ model_person = YOLO("../YOLO-Weights/yolov8n.pt")
 classNames = ['Capacete', 'Mascara', 'SEM-Capacete', 'SEM-Mascara', 'SEM-Colete', 'Pessoa', 'Colete']
 
 # Carregar a base de dados de rostos
-diretorio_base = '/home/ideal_pad/Documentos/Projetos/SafeView_v01/BackEnd/ScreenShot/faces'
+diretorio_base = 'faces'
 base_dados = carregar_base_dados(diretorio_base)
 
 

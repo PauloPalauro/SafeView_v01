@@ -1,28 +1,10 @@
-from fastapi import FastAPI, HTTPException,status, Request
-from firebase_config import db
-from fastapi.responses import JSONResponse
-import requests
-import bcrypt
-
-app = FastAPI()
-
-@app.get('/usuarios')
-async def todos_usuarios():
-    users_ref = db.collection('usuarios')
-    docs = users_ref.stream()
-    usuarios = []
-    for doc in docs:
-        usuario = doc.to_dict()
-        print(usuario)  # Adicione esta linha para verificar os dados no terminal
-        usuarios.append(usuario)
-    
-    return {'usuarios': usuarios}
-
 from fastapi import FastAPI, HTTPException, status, Request
 from firebase_config import db
 from fastapi.responses import JSONResponse
 import requests
 import logging
+import bcrypt
+
 
 app = FastAPI()
 
@@ -93,17 +75,17 @@ async def verifica_usuario(request: Request):
         info = await request.json()
         logger.info(f"Dados recebidos: {info}")  
 
-        email = info.get('email')
+        nome = info.get('nome')
         senha = info.get('senha')
 
-        if not email or not senha:
-            logger.error("Email ou senha não fornecidos.")
-            raise HTTPException(status_code=400, detail="Email e senha são obrigatórios.")
+        if not nome or not senha:
+            logger.error("nome ou senha não fornecidos.")
+            raise HTTPException(status_code=400, detail="nome e senha são obrigatórios.")
 
         users_ref = db.collection('usuarios')
         
-        logger.info(f"Verificando se o usuário com email {email} existe...")
-        docs = users_ref.where('Email', '==', email).stream()
+        logger.info(f"Verificando se o usuário com nome {nome} existe...")
+        docs = users_ref.where('Nome', '==', nome).stream()
         user_found = False
         stored_password = None
         for doc in docs:
@@ -113,14 +95,14 @@ async def verifica_usuario(request: Request):
             break
         
         if not user_found:
-            logger.error(f"Usuário com email {email} não encontrado.")
+            logger.error(f"Usuário com nome {nome} não encontrado.")
             raise HTTPException(status_code=404, detail="Usuário não encontrado.")
         
         if not bcrypt.checkpw(senha.encode('utf-8'), stored_password.encode('utf-8')):
             logger.error("Senha incorreta.")
             raise HTTPException(status_code=401, detail="Senha incorreta.")
 
-        logger.info(f"Usuário com email {email} autenticado com sucesso.")
+        logger.info(f"Usuário com nome {nome} autenticado com sucesso.")
         return JSONResponse({'mensagem': 'Usuário autenticado com sucesso'}, status_code=200)
     
     except HTTPException as http_exc:
