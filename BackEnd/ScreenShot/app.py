@@ -1,4 +1,8 @@
 import asyncio
+from datetime import datetime
+import os
+import tempfile
+import uuid
 import face_recognition
 from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, StreamingResponse
@@ -9,11 +13,21 @@ import cvzone
 import base64
 import time
 from io import BytesIO
+from upload_bucket import upload_pdf_to_firebase
 from face_recognition_module import carregar_base_dados, reconhecer_face
 from pdf_report import create_pdf_report
+import firebase_admin
+from firebase_admin import credentials, storage
 
 app = FastAPI()
 
+def initialize_firebase():
+    cred = credentials.Certificate("/home/ideal_pad/Documentos/Projetos/credenciais.json")
+    firebase_admin.initialize_app(cred, {
+        'storageBucket': 'safeviewbd.appspot.com'  
+})
+    
+initialize_firebase()
 clients = []
 
 # Carregar os modelos YOLO
@@ -40,6 +54,7 @@ async def send_message_to_clients(message, prefix):
             clients.remove(client)
 
 
+# Função analyze_image atualizada
 async def analyze_image(img, websocket=None):
     all_ok = True
 
@@ -62,7 +77,7 @@ async def analyze_image(img, websocket=None):
     except Exception as e:
         print(f"Erro no reconhecimento facial: {e}")
     
-    # Análise YOLO
+    # Análise YOLO (substitua model e classNames de acordo com seu código)
     results = model(img, stream=True)
     
     for r in results:
@@ -88,17 +103,20 @@ async def analyze_image(img, websocket=None):
         await send_message_to_clients(f"Imagem com itens de segurança em falta para {nome_pessoa}.", "sec")
 
     # Criar PDF diretamente da imagem em memória
-    pdf_output_path = create_pdf_report(nome_pessoa, all_ok, img)
-    print(f"Relatório PDF criado: {pdf_output_path}")
+    pdf_byte_string, pdf_filename = create_pdf_report(nome_pessoa, all_ok, img)
     
-    return img, all_ok, pdf_output_path
+    
+    public_url = upload_pdf_to_firebase(pdf_byte_string, pdf_filename)
 
+    print(f'PDF uploaded to Firebase. Public URL: {public_url}')
+
+    return img, all_ok, pdf_filename
 
 def generate_frames():
     cap = cv2.VideoCapture(0)
     cap.set(3, 1280)
     cap.set(4, 720)
-    
+
     try:
         person_detected = False
         detection_pause_time = 0
@@ -140,6 +158,10 @@ def generate_frames():
 
             ret, buffer = cv2.imencode('.jpg', img)
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+    except GeneratorExit:  # This handles the streaming cancellation (like a client disconnecting)
+        print("Stream was closed")
+    except Exception as e:  # Any other exceptions
+        print(f"Error in streaming: {e}")
     finally:
         cap.release()
 
