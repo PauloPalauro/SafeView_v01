@@ -18,6 +18,8 @@ from face_recognition_module import carregar_base_dados, reconhecer_face
 from pdf_report import create_pdf_report
 import firebase_admin
 from firebase_admin import credentials, storage
+import requests
+
 
 app = FastAPI()
 
@@ -53,8 +55,6 @@ async def send_message_to_clients(message, prefix):
         except WebSocketDisconnect:
             clients.remove(client)
 
-
-# Função analyze_image atualizada
 async def analyze_image(img, websocket=None):
     all_ok = True
 
@@ -96,21 +96,36 @@ async def analyze_image(img, websocket=None):
     encoded_image = base64.b64encode(buffer).decode('utf-8')
     await send_message_to_clients(encoded_image, "img")
 
-    # Enviar mensagem de status
+    # Enviar mensagem de status e iniciar requisição assíncrona se itens estiverem em falta
     if all_ok:
         await send_message_to_clients(f"Todos os itens de segurança presentes para {nome_pessoa}.", "sec")
     else:
         await send_message_to_clients(f"Imagem com itens de segurança em falta para {nome_pessoa}.", "sec")
+        
+        # Tentar enviar requisição de forma assíncrona com timeout
+        asyncio.create_task(send_alert_request(nome_pessoa))
 
     # Criar PDF diretamente da imagem em memória
     pdf_byte_string, pdf_filename = create_pdf_report(nome_pessoa, all_ok, img)
-    
     
     public_url = upload_pdf_to_firebase(pdf_byte_string, pdf_filename)
 
     print(f'PDF uploaded to Firebase. Public URL: {public_url}')
 
     return img, all_ok, pdf_filename
+
+
+async def send_alert_request(nome_pessoa):
+    try:
+        response = requests.post("http://192.168.0.9/", json={"status": "falta_de_itens", "pessoa": nome_pessoa}, timeout=1)
+        if response.status_code == 200:
+            print("Requisição enviada com sucesso para http://192.168.0.9/")
+        else:
+            print(f"Erro na requisição:")
+    except Exception as e:
+        print(f"Erro ao enviar requisição")
+        
+
 
 def generate_frames():
     cap = cv2.VideoCapture(0)
