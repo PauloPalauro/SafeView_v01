@@ -1,8 +1,11 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/Components/api_requests.dart';
 import 'package:flutter_application_1/Components/custom_button.dart';
 import 'package:flutter_application_1/Components/textfield_custom.dart';
 import 'package:flutter_application_1/Pages/main_page.dart';
+import 'package:flutter_application_1/Pages/menu_page.dart';
 import 'package:flutter_application_1/Pages/register_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -42,7 +45,7 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const MainPage(),
+          builder: (context) => const MenuPage(),
         ),
       );
     }

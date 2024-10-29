@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/Pages/main_page.dart';
 import 'package:flutter_application_1/Pages/menu_page.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -34,7 +35,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MenuPage(),
+      home: MainPage(),
     );
   }
 }

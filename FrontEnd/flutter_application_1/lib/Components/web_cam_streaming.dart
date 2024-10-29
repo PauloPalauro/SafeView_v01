@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import 'package:flutter_mjpeg/flutter_mjpeg.dart';
 import 'package:web_socket_channel/io.dart';
@@ -16,7 +18,7 @@ class _WebcamStreamScreenState extends State<WebcamStreamScreen> {
   String streamUrl = 'http://localhost:8001/video_feed';
   late WebSocketChannel channel;
   String statusMessage = 'Nenhuma mensagem recebida';
-  String SecurityMessage = "";
+  String securityMessage = "";
   String? base64Image;
   Color securityMessageColor = Colors.red;
 
@@ -49,7 +51,7 @@ class _WebcamStreamScreenState extends State<WebcamStreamScreen> {
       } else if (message.trim().toLowerCase().startsWith("sec:")) {
         String secMessage = message.substring(4).trim();
         setState(() {
-          SecurityMessage = secMessage;
+          securityMessage = secMessage;
           securityMessageColor =
               secMessage.contains("Todos os itens de segurança presentes para ")
                   ? Colors.green
@@ -166,7 +168,7 @@ class _WebcamStreamScreenState extends State<WebcamStreamScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 80.0),
             child: Text(
-              SecurityMessage,
+              securityMessage,
               style: TextStyle(fontSize: 20, color: securityMessageColor),
               textAlign: TextAlign.center,
             ),

@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/Components/custom_button.dart';
 import 'package:flutter_application_1/Components/api_requests.dart';
@@ -63,111 +65,82 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
+      body: Column(
         children: [
-          // Imagem de fundo
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('lib/images/trabalhadores_image.png'),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          // Conteúdo acima da imagem
-          Column(
-            children: [
-              Expanded(
-                child: Container(
-                  color: Colors.transparent,
-                  child: Center(
-                    child: Container(
-                      color: const Color.fromARGB(61, 0, 0, 0),
-                      padding: const EdgeInsets.all(10),
-                      child: Text(
-                        "SafeView",
-                        style: GoogleFonts.juliusSansOne(
-                          fontSize: 64,
-                          color: const Color.fromARGB(255, 255, 255, 255),
-                        ),
-                      ),
-                    ),
-                  ),
+          Expanded(
+            flex: 4,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(50),
                 ),
               ),
-              Expanded(
-                flex: 4,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(50),
-                    ),
-                  ),
-                  child: Column(
+              child: Column(
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 2.0,
-                              horizontal: 16,
-                            ),
-                            child: Text(
-                              "Register",
-                              style: GoogleFonts.jost(
-                                fontSize: 48,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 2.0,
+                          horizontal: 16,
+                        ),
+                        child: Text(
+                          "Register",
+                          style: GoogleFonts.jost(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
-                      ),
-                      CustomTextField(
-                        text1: 'NOME',
-                        controller: nomeController,
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      CustomTextField(
-                        text1: 'EMAIL',
-                        controller: emailController,
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      CustomTextField(
-                        text1: 'SENHA',
-                        controller: senhaController,
-                        obscureText: true,
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      CustomTextField(
-                        text1: 'CONFIRMAR SENHA',
-                        controller: confirmarSenhaController,
-                        obscureText: true,
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      CustomButton(
-                        function: () {
-                          _register();
-                        },
-                        text: 'Registrar',
-                      ),
-                      const SizedBox(
-                        height: 15,
+                        ),
                       ),
                     ],
                   ),
-                ),
-              )
-            ],
-          ),
+                  const SizedBox(
+                    height: 40,
+                  ),
+                  CustomTextField(
+                    text1: 'NOME',
+                    controller: nomeController,
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  CustomTextField(
+                    text1: 'EMAIL',
+                    controller: emailController,
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  CustomTextField(
+                    text1: 'SENHA',
+                    controller: senhaController,
+                    obscureText: true,
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  CustomTextField(
+                    text1: 'CONFIRMAR SENHA',
+                    controller: confirmarSenhaController,
+                    obscureText: true,
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  CustomButton(
+                    function: () {
+                      _register();
+                    },
+                    text: 'Registrar',
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                ],
+              ),
+            ),
+          )
         ],
       ),
     );

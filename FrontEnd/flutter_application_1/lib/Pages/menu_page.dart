@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/Components/web_cam_streaming.dart';
+import 'package:flutter_application_1/Pages/register_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class MenuPage extends StatefulWidget {
@@ -11,11 +12,9 @@ class MenuPage extends StatefulWidget {
 
 class _MenuPageState extends State<MenuPage> {
   int _selectedIndex = 0;
-  static const List<Widget> _widgetOptions = <Widget>[
-    Text(
-      'Index 0: Home',
-    ),
-    WebcamStreamScreen(),
+  static final List<Widget> _widgetOptions = <Widget>[
+    const RegisterPage(),
+    const WebcamStreamScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -68,7 +67,7 @@ class _MenuPageState extends State<MenuPage> {
               ),
             ),
             ListTile(
-              title: const Text('Item 1'),
+              title: const Text('Registrar'),
               onTap: () {
                 _onItemTapped(0);
                 Navigator.pop(context);
